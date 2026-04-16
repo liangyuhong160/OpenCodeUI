@@ -10,13 +10,42 @@ interface VisualEditorProps {
   onRemoveElement: (elementId: string) => void
 }
 
+// 组件类型中文映射
+const ELEMENT_TYPE_LABELS: Record<string, string> = {
+  Carousel: '轮播图',
+  Grid: '网格',
+  MenuList: '菜单列表',
+  GridList: '网格列表',
+  Card: '卡片',
+  Image: '图片',
+  Text: '文本',
+  PriceText: '价格文本',
+  Button: '按钮',
+  Loading: '加载中',
+  Empty: '空状态',
+  SearchBar: '搜索栏',
+  TabBar: '标签栏',
+  NavBar: '导航栏',
+}
+
+// 显示条件预设（大白话）
+const DISPLAY_CONDITION_PRESETS = [
+  { value: 'always', label: '始终显示' },
+  { value: 'login_required', label: '用户已登录时显示' },
+  { value: 'vip_only', label: '仅VIP用户可见' },
+  { value: 'not_login', label: '未登录时显示' },
+  { value: 'has_data', label: '有数据时显示' },
+  { value: 'no_data', label: '无数据时显示' },
+  { value: 'custom', label: '自定义条件...' },
+]
+
 // 字段配置定义
 const FIELD_CONFIG = {
   page_info: {
     label: '页面信息',
     icon: '📄',
     fields: [
-      { key: 'page_id', label: '页面 ID', type: 'text', placeholder: 'pg_xxx', help: '唯一标识，格式：pg_xxx' },
+      { key: 'page_id', label: '页面 ID', type: 'text', placeholder: 'pg_xxx', help: '唯一标识，系统自动生成' },
       { key: 'page_name', label: '页面名称', type: 'text', placeholder: '商品列表页', help: '页面的中文名称' },
       { key: 'route_path', label: '路由路径', type: 'text', placeholder: '/pages/goods/list', help: '页面的路由地址' },
     ]
@@ -33,17 +62,29 @@ const FIELD_CONFIG = {
     type: 'array',
     help: '页面级别的全局规则，如加载时机、权限控制等',
     fields: [
-      { key: 'logic_id', label: '规则 ID', type: 'text', placeholder: 'gl_xxx' },
+      { key: 'logic_id', label: '规则 ID', type: 'text', placeholder: 'gl_xxx', hidden: true },
       { key: 'rule_name', label: '规则名称', type: 'text', placeholder: '登录校验' },
-      { key: 'trigger_timing', label: '触发时机', type: 'select', options: ['onLoad', 'onShow', 'onHide', 'onUnload', 'onPullDownRefresh', 'onReachBottom'] },
-      { key: 'description', label: '规则描述', type: 'textarea', placeholder: '描述规则的具体逻辑' },
+      { key: 'trigger_timing', label: '什么时候触发', type: 'select', options: [
+        { value: 'onLoad', label: '页面加载时' },
+        { value: 'onShow', label: '页面显示时' },
+        { value: 'onHide', label: '页面隐藏时' },
+        { value: 'onUnload', label: '页面卸载时' },
+        { value: 'onPullDownRefresh', label: '下拉刷新时' },
+        { value: 'onReachBottom', label: '滚动到底部时' },
+      ]},
+      { key: 'description', label: '规则说明', type: 'textarea', placeholder: '用大白话描述这个规则，比如：用户打开页面时检查是否登录' },
     ]
   },
   layout_schema: {
     label: '布局结构',
     icon: '📐',
     fields: [
-      { key: 'layout_type', label: '布局类型', type: 'select', options: ['VerticalFlowLayout', 'SideBarLayout', 'GridLayout', 'TabLayout'] },
+      { key: 'layout_type', label: '布局方式', type: 'select', options: [
+        { value: 'VerticalFlowLayout', label: '垂直流式布局（从上到下）' },
+        { value: 'SideBarLayout', label: '侧边栏布局' },
+        { value: 'GridLayout', label: '网格布局' },
+        { value: 'TabLayout', label: '标签页布局' },
+      ]},
     ]
   },
   elements: {
@@ -52,25 +93,89 @@ const FIELD_CONFIG = {
     type: 'array',
     help: '页面上的所有组件元素',
     fields: [
-      { key: 'element_id', label: '元素 ID', type: 'text', placeholder: 'el_xxx' },
-      { key: 'element_type', label: '组件类型', type: 'select', options: ['Carousel', 'Grid', 'MenuList', 'GridList', 'Card', 'Image', 'Text', 'PriceText', 'Button', 'Loading', 'Empty', 'SearchBar', 'TabBar', 'NavBar'] },
+      { key: 'element_id', label: '元素 ID', type: 'text', hidden: true },
+      { key: 'element_type', label: '组件类型', type: 'select', options: [
+        { value: 'Text', label: '文本' },
+        { value: 'Image', label: '图片' },
+        { value: 'Button', label: '按钮' },
+        { value: 'Card', label: '卡片' },
+        { value: 'Carousel', label: '轮播图' },
+        { value: 'Grid', label: '网格' },
+        { value: 'MenuList', label: '菜单列表' },
+        { value: 'GridList', label: '网格列表' },
+        { value: 'PriceText', label: '价格文本' },
+        { value: 'Loading', label: '加载中' },
+        { value: 'Empty', label: '空状态' },
+        { value: 'SearchBar', label: '搜索栏' },
+        { value: 'TabBar', label: '标签栏' },
+        { value: 'NavBar', label: '导航栏' },
+      ]},
       { key: 'element_name', label: '元素名称', type: 'text', placeholder: '商品卡片' },
-      { key: 'parent_id', label: '父级 ID', type: 'text', placeholder: 'root' },
-      { key: 'functional_logic', label: '功能逻辑', type: 'textarea', placeholder: '点击跳转到详情页' },
-      { key: 'data_mapping', label: '数据映射', type: 'text', placeholder: 'img_url: 图片地址' },
-      { key: 'api_reference', label: '接口引用', type: 'text', placeholder: 'GET /api/goods/list' },
-      { key: 'display_condition', label: '显示条件', type: 'text', placeholder: 'isVIP == true (可选)' },
+      { key: 'parent_id', label: '放在哪个元素里面', type: 'parent_select' },
+      { key: 'functional_logic', label: '交互说明', type: 'textarea', placeholder: '用大白话描述，比如：点击后跳转到商品详情页' },
+      { key: 'data_mapping', label: '数据来源', type: 'text', placeholder: '比如：商品图片、商品名称' },
+      { key: 'api_reference', label: '接口地址', type: 'text', placeholder: '比如：GET /api/goods/list（选填）' },
+      { key: 'display_condition', label: '什么时候显示', type: 'display_condition' },
     ]
   }
 }
 
 // 输入组件
-function FieldInput({ field, value, onChange }: { 
+function FieldInput({ field, value, onChange, elements }: { 
   field: any
   value: any
   onChange: (value: any) => void
+  elements?: Requirement['elements']
 }) {
   const baseClass = "w-full px-3 py-2 bg-bg-300 border border-border-200 rounded text-sm text-text-100 focus:outline-none focus:ring-2 focus:ring-accent-main-100/50 focus:border-accent-main-100 transition-colors"
+
+  // 父元素选择器
+  if (field.type === 'parent_select') {
+    const options = [
+      { value: 'root', label: '根目录（最外层）' },
+      ...(elements || []).map(el => ({
+        value: el.element_id,
+        label: el.element_name || '未命名'
+      }))
+    ]
+    return (
+      <select
+        value={value || 'root'}
+        onChange={(e) => onChange(e.target.value)}
+        className={baseClass}
+      >
+        {options.map(opt => (
+          <option key={opt.value} value={opt.value}>{opt.label}</option>
+        ))}
+      </select>
+    )
+  }
+
+  // 显示条件选择器
+  if (field.type === 'display_condition') {
+    return (
+      <DisplayConditionEditor
+        value={value || ''}
+        onChange={onChange}
+      />
+    )
+  }
+
+  // 带中文标签的选择器
+  if (field.type === 'select' && field.options && typeof field.options[0] === 'object') {
+    return (
+      <select
+        value={value || ''}
+        onChange={(e) => onChange(e.target.value)}
+        className={baseClass}
+      >
+        <option value="">请选择</option>
+        {field.options.map((opt: any) => (
+          <option key={opt.value} value={opt.value}>{opt.label}</option>
+        ))}
+      </select>
+    )
+  }
 
   switch (field.type) {
     case 'select':
@@ -82,7 +187,7 @@ function FieldInput({ field, value, onChange }: {
         >
           <option value="">请选择</option>
           {field.options?.map((opt: string) => (
-            <option key={opt} value={opt}>{opt}</option>
+            <option key={opt} value={opt}>{ELEMENT_TYPE_LABELS[opt] || opt}</option>
           ))}
         </select>
       )
@@ -93,7 +198,7 @@ function FieldInput({ field, value, onChange }: {
           onChange={(e) => onChange(e.target.value)}
           placeholder={field.placeholder}
           rows={3}
-          className={`${baseClass} resize-none`}
+          className={baseClass + ' resize-none'}
         />
       )
     default:
@@ -107,6 +212,65 @@ function FieldInput({ field, value, onChange }: {
         />
       )
   }
+}
+
+// 显示条件编辑器（大白话）
+function DisplayConditionEditor({ value, onChange }: {
+  value: string
+  onChange: (value: string) => void
+}) {
+  const [preset, setPreset] = useState(() => {
+    const found = DISPLAY_CONDITION_PRESETS.find(p => value === p.value)
+    return found ? found.value : (value ? 'custom' : 'always')
+  })
+  const [customText, setCustomText] = useState(() => {
+    const isPreset = DISPLAY_CONDITION_PRESETS.some(p => value === p.value)
+    return isPreset ? '' : value
+  })
+
+  const handlePresetChange = (newPreset: string) => {
+    setPreset(newPreset)
+    if (newPreset === 'custom') {
+      onChange(customText || '')
+    } else {
+      onChange(newPreset)
+    }
+  }
+
+  const handleCustomChange = (text: string) => {
+    setCustomText(text)
+    if (preset === 'custom') {
+      onChange(text)
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      <select
+        value={preset}
+        onChange={(e) => handlePresetChange(e.target.value)}
+        className="w-full px-3 py-2 bg-bg-300 border border-border-200 rounded text-sm text-text-100 focus:outline-none focus:ring-2 focus:ring-accent-main-100/50"
+      >
+        {DISPLAY_CONDITION_PRESETS.map(p => (
+          <option key={p.value} value={p.value}>{p.label}</option>
+        ))}
+      </select>
+      {preset === 'custom' && (
+        <input
+          type="text"
+          value={customText}
+          onChange={(e) => handleCustomChange(e.target.value)}
+          placeholder="用大白话描述，比如：用户是VIP且购物车有商品时"
+          className="w-full px-3 py-2 bg-bg-300 border border-border-200 rounded text-sm text-text-100 focus:outline-none focus:ring-2 focus:ring-accent-main-100/50"
+        />
+      )}
+      {preset !== 'custom' && preset !== 'always' && (
+        <p className="text-xs text-text-400">
+          系统会自动转换为代码逻辑，您只需选择条件即可
+        </p>
+      )}
+    </div>
+  )
 }
 
 // 数组编辑器（功能描述）
@@ -160,13 +324,14 @@ function ArrayEditor({ items, onChange, placeholder }: {
 }
 
 // 对象数组编辑器（全局逻辑、页面元素）
-function ObjectArrayEditor({ items, fields, onChange, onAdd, onRemove, emptyLabel }: {
+function ObjectArrayEditor({ items, fields, onChange, onAdd, onRemove, emptyLabel, elements }: {
   items: any[]
   fields: any[]
   onChange: (index: number, key: string, value: any) => void
   onAdd: () => void
   onRemove: (index: number) => void
   emptyLabel: string
+  elements?: Requirement['elements']
 }) {
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set([0]))
 
@@ -188,8 +353,7 @@ function ObjectArrayEditor({ items, fields, onChange, onAdd, onRemove, emptyLabe
         </div>
       ) : (
         items.map((item, index) => (
-          <div key={index} className="border border-border-200 rounded-lg overflow-hidden bg-bg-300/50">
-            {/* 头部 */}
+          <div key={item.element_id || index} className="border border-border-200 rounded-lg overflow-hidden bg-bg-300/50">
             <div
               className="flex items-center justify-between px-4 py-3 bg-bg-300 cursor-pointer hover:bg-bg-400 transition-colors"
               onClick={() => toggleExpand(index)}
@@ -201,11 +365,11 @@ function ObjectArrayEditor({ items, fields, onChange, onAdd, onRemove, emptyLabe
                   <ChevronRight className="w-4 h-4 text-text-300" />
                 )}
                 <span className="text-sm font-medium text-text-100">
-                  {item.element_name || item.rule_name || `${emptyLabel} ${index + 1}`}
+                  {item.element_name || item.rule_name || emptyLabel + ' ' + (index + 1)}
                 </span>
                 {item.element_type && (
                   <span className="text-xs px-2 py-0.5 bg-purple-600/20 text-purple-400 rounded">
-                    {item.element_type}
+                    {ELEMENT_TYPE_LABELS[item.element_type] || item.element_type}
                   </span>
                 )}
               </div>
@@ -220,29 +384,32 @@ function ObjectArrayEditor({ items, fields, onChange, onAdd, onRemove, emptyLabe
               </button>
             </div>
 
-            {/* 内容 */}
             {expandedItems.has(index) && (
               <div className="p-4 space-y-3">
-                {fields.map((field: any) => (
-                  <div key={field.key}>
-                    <label className="flex items-center gap-1.5 text-xs font-medium text-text-200 mb-1.5">
-                      {field.label}
-                      {field.help && (
-                        <span className="group relative">
-                          <HelpCircle className="w-3.5 h-3.5 text-text-400" />
-                          <span className="hidden group-hover:block absolute left-0 top-full mt-1 w-48 p-2 bg-bg-100 border border-border-200 rounded shadow-lg text-text-200 text-xs z-10">
-                            {field.help}
+                {fields.map((field: any) => {
+                  if (field.hidden) return null
+                  return (
+                    <div key={field.key}>
+                      <label className="flex items-center gap-1.5 text-xs font-medium text-text-200 mb-1.5">
+                        {field.label}
+                        {field.help && (
+                          <span className="group relative">
+                            <HelpCircle className="w-3.5 h-3.5 text-text-400" />
+                            <span className="hidden group-hover:block absolute left-0 top-full mt-1 w-48 p-2 bg-bg-100 border border-border-200 rounded shadow-lg text-text-200 text-xs z-10">
+                              {field.help}
+                            </span>
                           </span>
-                        </span>
-                      )}
-                    </label>
-                    <FieldInput
-                      field={field}
-                      value={item[field.key]}
-                      onChange={(value) => onChange(index, field.key, value)}
-                    />
-                  </div>
-                ))}
+                        )}
+                      </label>
+                      <FieldInput
+                        field={field}
+                        value={item[field.key]}
+                        onChange={(value) => onChange(index, field.key, value)}
+                        elements={elements}
+                      />
+                    </div>
+                  )
+                })}
               </div>
             )}
           </div>
@@ -257,6 +424,43 @@ function ObjectArrayEditor({ items, fields, onChange, onAdd, onRemove, emptyLabe
       </button>
     </div>
   )
+}
+
+// 显示条件转换：大白话 -> JSON格式
+function convertDisplayCondition(condition: string): any {
+  if (!condition || condition === 'always') return null
+  
+  const conditionMap: Record<string, any> = {
+    'login_required': { type: 'user', operator: 'eq', value: 'logged_in' },
+    'vip_only': { type: 'user', operator: 'eq', value: 'vip' },
+    'not_login': { type: 'user', operator: 'eq', value: 'not_logged_in' },
+    'has_data': { type: 'data', operator: 'exists', value: true },
+    'no_data': { type: 'data', operator: 'empty', value: true },
+  }
+  
+  return conditionMap[condition] || { type: 'custom', expression: condition }
+}
+
+// 显示条件转换：JSON格式 -> 大白话
+function convertFromDisplayCondition(condition: any): string {
+  if (!condition) return 'always'
+  
+  const reverseMap: Record<string, string> = {
+    'user:eq:logged_in': 'login_required',
+    'user:eq:vip': 'vip_only',
+    'user:eq:not_logged_in': 'not_login',
+    'data:exists:true': 'has_data',
+    'data:empty:true': 'no_data',
+  }
+  
+  const key = condition.type && condition.operator && condition.value !== undefined
+    ? condition.type + ':' + condition.operator + ':' + condition.value
+    : null
+    
+  if (key && reverseMap[key]) return reverseMap[key]
+  if (condition.type === 'custom' && condition.expression) return condition.expression
+  
+  return JSON.stringify(condition)
 }
 
 // 主可视化编辑器
@@ -292,7 +496,7 @@ export const VisualEditor = memo(function VisualEditor({
     onUpdate({
       global_logic: [
         ...requirement.global_logic,
-        { logic_id: `gl_${Date.now()}`, rule_name: '', trigger_timing: 'onLoad', description: '' }
+        { logic_id: 'gl_' + Date.now(), rule_name: '', trigger_timing: 'onLoad', description: '' }
       ]
     })
   }
@@ -314,20 +518,26 @@ export const VisualEditor = memo(function VisualEditor({
 
   const addElement = () => {
     onAddElement({
-      element_id: `el_${Date.now()}`,
+      element_id: 'el_' + Date.now(),
       element_type: 'Text',
       parent_id: 'root',
       display_props: {},
       element_name: '',
       functional_logic: '',
       data_mapping: '',
-      api_reference: ''
+      api_reference: '',
+      display_condition: ''
     })
   }
 
   const handleUpdateElement = (index: number, key: string, value: any) => {
     const element = requirement.elements[index]
     onUpdateElement(element.element_id, { [key]: value })
+  }
+
+  const handleRemoveElement = (index: number) => {
+    const element = requirement.elements[index]
+    onRemoveElement(element.element_id)
   }
 
   const sections = [
@@ -340,7 +550,6 @@ export const VisualEditor = memo(function VisualEditor({
 
   return (
     <div className="flex h-full">
-      {/* 左侧导航 */}
       <div className="w-48 border-r border-border-200 bg-bg-200/50 overflow-y-auto">
         <div className="p-3">
           <h3 className="text-xs font-semibold text-text-300 uppercase tracking-wider mb-2">编辑区域</h3>
@@ -349,11 +558,11 @@ export const VisualEditor = memo(function VisualEditor({
               <button
                 key={key}
                 onClick={() => setActiveSection(key)}
-                className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded transition-colors ${
+                className={'w-full flex items-center gap-2 px-3 py-2 text-sm rounded transition-colors ' + (
                   activeSection === key
                     ? 'bg-accent-main-100/10 text-accent-main-100 font-medium'
                     : 'text-text-200 hover:bg-bg-300 hover:text-text-100'
-                }`}
+                )}
               >
                 <span>{config.icon}</span>
                 <span className="truncate">{config.label}</span>
@@ -368,17 +577,15 @@ export const VisualEditor = memo(function VisualEditor({
         </div>
       </div>
 
-      {/* 右侧内容 */}
       <div className="flex-1 overflow-y-auto">
         <div className="p-6 max-w-3xl">
-          {/* 页面信息 */}
           {activeSection === 'page_info' && (
             <div className="space-y-4">
               <div className="flex items-center gap-2 mb-4">
                 <span className="text-2xl">{FIELD_CONFIG.page_info.icon}</span>
                 <h2 className="text-lg font-semibold text-text-100">{FIELD_CONFIG.page_info.label}</h2>
               </div>
-              {FIELD_CONFIG.page_info.fields.map((field) => (
+              {FIELD_CONFIG.page_info.fields.filter(f => !f.hidden).map((field) => (
                 <div key={field.key}>
                   <label className="flex items-center gap-1.5 text-sm font-medium text-text-200 mb-2">
                     {field.label}
@@ -401,7 +608,6 @@ export const VisualEditor = memo(function VisualEditor({
             </div>
           )}
 
-          {/* 功能描述 */}
           {activeSection === 'function_description' && (
             <div className="space-y-4">
               <div className="flex items-center gap-2 mb-4">
@@ -417,7 +623,6 @@ export const VisualEditor = memo(function VisualEditor({
             </div>
           )}
 
-          {/* 全局逻辑 */}
           {activeSection === 'global_logic' && (
             <div className="space-y-4">
               <div className="flex items-center gap-2 mb-4">
@@ -436,7 +641,6 @@ export const VisualEditor = memo(function VisualEditor({
             </div>
           )}
 
-          {/* 布局结构 */}
           {activeSection === 'layout_schema' && (
             <div className="space-y-4">
               <div className="flex items-center gap-2 mb-4">
@@ -458,7 +662,6 @@ export const VisualEditor = memo(function VisualEditor({
             </div>
           )}
 
-          {/* 页面元素 */}
           {activeSection === 'elements' && (
             <div className="space-y-4">
               <div className="flex items-center gap-2 mb-4">
@@ -472,8 +675,9 @@ export const VisualEditor = memo(function VisualEditor({
                 fields={FIELD_CONFIG.elements.fields}
                 onChange={handleUpdateElement}
                 onAdd={addElement}
-                onRemove={(index) => onRemoveElement(requirement.elements[index].element_id)}
+                onRemove={handleRemoveElement}
                 emptyLabel="页面元素"
+                elements={requirement.elements}
               />
             </div>
           )}
