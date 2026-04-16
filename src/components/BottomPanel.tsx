@@ -26,9 +26,7 @@ interface BottomPanelProps {
 function PanelFallback() {
   const { t } = useTranslation(['components', 'common'])
   return (
-    <div className="flex items-center justify-center h-full text-text-400 text-[length:var(--fs-sm)]">
-      {t('bottomPanel.loadingPanel')}
-    </div>
+    <div className="flex items-center justify-center h-full text-text-400 text-[length:var(--fs-sm)]">{t('bottomPanel.loadingPanel')}</div>
   )
 }
 
@@ -153,10 +151,15 @@ export const BottomPanel = memo(function BottomPanel({ directory }: BottomPanelP
         )
       }
 
-      return (
-        <>
-          {/* Keep files mounted so expanded folders and previews survive tab switches. */}
-          <div className={activeTab.type === 'files' ? 'h-full' : 'hidden'}>
+      switch (activeTab.type) {
+        case 'terminal':
+          return (
+            <Suspense fallback={<PanelFallback />}>
+              <TerminalContent activeTab={activeTab} directory={directory} />
+            </Suspense>
+          )
+        case 'files':
+          return (
             <Suspense fallback={<PanelFallback />}>
               <FilesContent
                 activeTab={activeTab}
@@ -165,50 +168,46 @@ export const BottomPanel = memo(function BottomPanel({ directory }: BottomPanelP
                 sessionId={sessionId}
               />
             </Suspense>
-          </div>
-
-          {sessionId ? (
-            <div className={activeTab.type === 'changes' ? 'h-full' : 'hidden'}>
-              <Suspense fallback={<PanelFallback />}>
-                <ChangesContent
-                  activeTab={activeTab}
-                  directory={directory}
-                  sessionId={sessionId}
-                  isPanelResizing={isPanelResizing}
-                />
-              </Suspense>
-            </div>
-          ) : activeTab.type === 'changes' ? (
-            <div className="flex items-center justify-center h-full text-text-400 text-[length:var(--fs-sm)]">
-              {t('rightPanel.noActiveSession')}
-            </div>
-          ) : null}
-
-          {activeTab.type === 'terminal' ? (
+          )
+        case 'changes':
+          if (!sessionId) {
+            return (
+              <div className="flex items-center justify-center h-full text-text-400 text-[length:var(--fs-sm)]">
+                {t('rightPanel.noActiveSession')}
+              </div>
+            )
+          }
+          return (
             <Suspense fallback={<PanelFallback />}>
-              <TerminalContent activeTab={activeTab} directory={directory} />
+              <ChangesContent
+                activeTab={activeTab}
+                directory={directory}
+                sessionId={sessionId}
+                isPanelResizing={isPanelResizing}
+              />
             </Suspense>
-          ) : null}
-
-          {activeTab.type === 'mcp' ? (
+          )
+        case 'mcp':
+          return (
             <Suspense fallback={<PanelFallback />}>
               <McpPanel isResizing={isPanelResizing} />
             </Suspense>
-          ) : null}
-
-          {activeTab.type === 'skill' ? (
+          )
+        case 'skill':
+          return (
             <Suspense fallback={<PanelFallback />}>
               <SkillPanel isResizing={isPanelResizing} />
             </Suspense>
-          ) : null}
-
-          {activeTab.type === 'worktree' ? (
+          )
+        case 'worktree':
+          return (
             <Suspense fallback={<PanelFallback />}>
               <WorktreePanel isResizing={isPanelResizing} />
             </Suspense>
-          ) : null}
-        </>
-      )
+          )
+        default:
+          return null
+      }
     },
     [isRestoring, handleNewTerminal, directory, sessionId, isPanelResizing, t],
   )

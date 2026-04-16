@@ -19,7 +19,7 @@ const SIDEBAR_MAX_WIDTH = 480
 const SMALL_DESKTOP_BREAKPOINT = 1100
 
 const RIGHT_PANEL_HARD_MIN_WIDTH = 160
-const RIGHT_PANEL_DEFAULT_WIDTH = 450
+const RIGHT_PANEL_DEFAULT_WIDTH = 800
 const RIGHT_PANEL_MAX_WIDTH = 1280
 
 function clamp(value: number, min: number, max: number) {

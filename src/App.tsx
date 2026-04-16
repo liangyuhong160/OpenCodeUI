@@ -7,6 +7,8 @@ import type { CommandItem } from './components/CommandPalette'
 import { ToastContainer } from './components/ToastContainer'
 import { RightPanel } from './components/RightPanel'
 import { BottomPanel } from './components/BottomPanel'
+import { RequirementPanel } from './features/requirement'
+import { RequirementProvider } from './contexts/requirement'
 import { useDirectory, useGlobalEvents, useGlobalKeybindings, useRouter } from './hooks'
 import { useViewportHeight } from './hooks/useViewportHeight'
 import { useCloseServiceDialog } from './hooks/useCloseServiceDialog'
@@ -20,7 +22,6 @@ import {
   usePaneController,
   usePaneControllers,
   usePaneLayout,
-  updateStore,
 } from './store'
 import {
   ChatViewportProvider,
@@ -32,7 +33,6 @@ import { uiErrorHandler, isSameDirectory, collectActiveDirectories } from './uti
 import { initNotificationSound } from './utils/notificationSoundBridge'
 import { createPtySession } from './api/pty'
 import type { TerminalTab } from './store/layoutStore'
-import type { SettingsTab } from './features/settings/SettingsDialog'
 
 const SettingsDialog = lazy(() =>
   import('./features/settings/SettingsDialog').then(module => ({ default: module.SettingsDialog })),
@@ -78,11 +78,6 @@ function App() {
   useEffect(() => {
     const cleanup = initNotificationSound()
     return cleanup
-  }, [])
-
-  useEffect(() => {
-    if (import.meta.env.DEV) return
-    void updateStore.checkForUpdates()
   }, [])
 
   useViewportHeight()
@@ -209,17 +204,13 @@ function App() {
   const focusedDirectory = focusedRouteDirectory || ''
 
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false)
-  const [settingsInitialTab, setSettingsInitialTab] = useState<SettingsTab>('servers')
-  const openSettingsTab = useCallback((tab: SettingsTab) => {
-    setSettingsInitialTab(tab)
+  const [settingsInitialTab, setSettingsInitialTab] = useState<
+    'appearance' | 'chat' | 'notifications' | 'service' | 'servers' | 'keybindings'
+  >('servers')
+  const openSettings = useCallback(() => {
+    setSettingsInitialTab('servers')
     setSettingsDialogOpen(true)
   }, [])
-  const openSettings = useCallback(() => {
-    openSettingsTab('servers')
-  }, [openSettingsTab])
-  const openAboutSettings = useCallback(() => {
-    openSettingsTab('about')
-  }, [openSettingsTab])
   const closeSettings = useCallback(() => setSettingsDialogOpen(false), [])
 
   const [projectDialogOpen, setProjectDialogOpen] = useState(false)
@@ -344,7 +335,8 @@ function App() {
         description: t('commands:openShortcutsSettingsDesc'),
         category: t('commands:categories.general'),
         action: () => {
-          openSettingsTab('keybindings')
+          setSettingsInitialTab('keybindings')
+          setSettingsDialogOpen(true)
         },
       },
       {
@@ -522,7 +514,6 @@ function App() {
     t,
     openSettings,
     openProject,
-    openSettingsTab,
     sidebarExpanded,
     setSidebarExpanded,
     focusedController,
@@ -536,69 +527,73 @@ function App() {
   const { showCloseDialog, handleCloseDialogConfirm, handleCloseDialogCancel } = useCloseServiceDialog()
 
   return (
-    <div
-      className="relative h-[var(--app-height)] flex bg-bg-100 overflow-hidden"
-      style={{ paddingTop: 'var(--safe-area-inset-top)' }}
-    >
-      <ChatViewportProvider value={chatViewport}>
-        <Sidebar
-          isOpen={sidebarExpanded}
-          selectedSessionId={paneLayout.focusedSessionId}
-          onSelectSession={handleSelectSession}
-          onNewSession={handleNewSession}
-          onOpen={handleOpenSidebar}
-          onClose={() => setSidebarExpanded(false)}
-          contextLimit={focusedController?.contextLimit}
-          onOpenSettings={openSettings}
-          projectDialogOpen={projectDialogOpen}
-          onProjectDialogClose={closeProjectDialog}
-        />
+    <RequirementProvider>
+      <div
+        className="relative h-[var(--app-height)] flex bg-bg-100 overflow-hidden"
+        style={{ paddingTop: 'var(--safe-area-inset-top)' }}
+      >
+        <ChatViewportProvider value={chatViewport}>
+          <Sidebar
+            isOpen={sidebarExpanded}
+            selectedSessionId={paneLayout.focusedSessionId}
+            onSelectSession={handleSelectSession}
+            onNewSession={handleNewSession}
+            onOpen={handleOpenSidebar}
+            onClose={() => setSidebarExpanded(false)}
+            contextLimit={focusedController?.contextLimit}
+            onOpenSettings={openSettings}
+            projectDialogOpen={projectDialogOpen}
+            onProjectDialogClose={closeProjectDialog}
+          />
 
-        <div className="flex-1 flex min-w-0 h-full overflow-hidden">
-          <div
-            ref={surfaceRef}
-            className="flex-1 flex flex-col min-w-0 overflow-hidden"
-            style={{
-              minWidth:
-                chatViewport.interaction.sidebarBehavior === 'overlay' ? undefined : `${CHAT_SURFACE_MIN_WIDTH}px`,
-            }}
-          >
+          <div className="flex-1 flex min-w-0 h-full overflow-hidden">
             <div
-              className={paneLayout.isSplit && !paneLayout.fullscreenPaneId ? 'flex-1 min-h-0 p-2' : 'flex-1 min-h-0'}
+              ref={surfaceRef}
+              className="flex-1 flex flex-col min-w-0 overflow-hidden"
+              style={{
+                minWidth:
+                  chatViewport.interaction.sidebarBehavior === 'overlay' ? undefined : `${CHAT_SURFACE_MIN_WIDTH}px`,
+              }}
             >
-              <SplitContainer
-                node={paneLayout.root}
-                renderLeaf={renderPaneLeaf}
-                fullscreenPaneId={paneLayout.fullscreenPaneId}
-              />
+              <div
+                className={paneLayout.isSplit && !paneLayout.fullscreenPaneId ? 'flex-1 min-h-0 p-2' : 'flex-1 min-h-0'}
+              >
+                <SplitContainer
+                  node={paneLayout.root}
+                  renderLeaf={renderPaneLeaf}
+                  fullscreenPaneId={paneLayout.fullscreenPaneId}
+                />
+              </div>
+
+              <BottomPanel directory={focusedDirectory} />
             </div>
 
-            <BottomPanel directory={focusedDirectory} />
+            <RightPanel directory={focusedDirectory} sessionId={paneLayout.focusedSessionId} />
           </div>
 
-          <RightPanel directory={focusedDirectory} sessionId={paneLayout.focusedSessionId} />
-        </div>
+          <RequirementPanel />
 
-        <Suspense fallback={null}>
-          <SettingsDialog isOpen={settingsDialogOpen} onClose={closeSettings} initialTab={settingsInitialTab} />
-          <CommandPalette
-            isOpen={commandPaletteOpen}
-            onClose={() => setCommandPaletteOpen(false)}
-            commands={commands}
-          />
-        </Suspense>
+          <Suspense fallback={null}>
+            <SettingsDialog isOpen={settingsDialogOpen} onClose={closeSettings} initialTab={settingsInitialTab} />
+            <CommandPalette
+              isOpen={commandPaletteOpen}
+              onClose={() => setCommandPaletteOpen(false)}
+              commands={commands}
+            />
+          </Suspense>
 
-        <ToastContainer onOpenAbout={openAboutSettings} />
+          <ToastContainer />
 
-        <Suspense fallback={null}>
-          <CloseServiceDialog
-            isOpen={showCloseDialog}
-            onConfirm={handleCloseDialogConfirm}
-            onCancel={handleCloseDialogCancel}
-          />
-        </Suspense>
-      </ChatViewportProvider>
-    </div>
+          <Suspense fallback={null}>
+            <CloseServiceDialog
+              isOpen={showCloseDialog}
+              onConfirm={handleCloseDialogConfirm}
+              onCancel={handleCloseDialogCancel}
+            />
+          </Suspense>
+        </ChatViewportProvider>
+      </div>
+    </RequirementProvider>
   )
 }
 

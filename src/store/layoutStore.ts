@@ -225,7 +225,7 @@ export class LayoutStore {
     sidebarFolderRecentsShowDiff: true,
     sidebarShowChildSessions: false,
     rightPanelOpen: false,
-    rightPanelWidth: 450,
+    rightPanelWidth: 800,
     bottomPanelOpen: false,
     bottomPanelHeight: 250,
     wakeLock: false,

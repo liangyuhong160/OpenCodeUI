@@ -68,6 +68,3 @@ export type { SoundSettings, EventSoundConfig } from './soundStore'
 
 export { followupQueueStore, useFollowupQueue } from './followupQueueStore'
 export type { QueuedFollowupDraft } from './followupQueueStore'
-
-export { updateStore, useUpdateStore, compareVersions, hasUpdateAvailable, shouldShowUpdateToast } from './updateStore'
-export type { UpdateRelease, UpdateState } from './updateStore'
