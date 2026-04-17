@@ -2,7 +2,7 @@ import { memo, useCallback, useEffect, useState, useRef } from 'react'
 import Editor from '@monaco-editor/react'
 import { 
   PanelRightClose, Save, FileJson, FileText, Eye, Download, 
-  RefreshCw, Loader2, Copy, Check, AlertCircle, FilePlus, Sparkles, Bot, ChevronDown, Code, Layout
+  RefreshCw, Loader2, Copy, Check, AlertCircle, FilePlus, Sparkles, Bot, ChevronDown, Code, Layout, Maximize2
 } from 'lucide-react'
 import { useRequirement } from '../../contexts/requirement'
 import { paneLayoutStore } from '../../store/paneLayoutStore'
@@ -11,6 +11,8 @@ import { getSDKClient } from '../../api/sdk'
 import { formatPathForApi } from '../../utils/directoryUtils'
 import { getSelectableAgents } from '../../api/agent'
 import { VisualEditor } from './VisualEditor'
+import { PRDViewer } from './PRDViewer'
+import { PrototypeViewer } from './PrototypeViewer'
 
 interface RequirementPanelProps {
   className?: string
@@ -35,14 +37,14 @@ export const RequirementPanel = memo(function RequirementPanel({ className = '' 
   } = useRequirement()
 
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)
-  const [panelWidth, setPanelWidth] = useState(800)
+  const [panelWidth, setPanelWidth] = useState(1200)
   const [isResizing, setIsResizing] = useState(false)
   const [copied, setCopied] = useState(false)
   const [jsonValid, setJsonValid] = useState(true)
   const [notification, setNotification] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null)
   const [selectedAgent, setSelectedAgent] = useState<string>(REQUIREMENT_AGENT)
   const [showAgentDropdown, setShowAgentDropdown] = useState(false)
-  const [editMode, setEditMode] = useState<'visual' | 'json'>('visual')
+  const [editMode, setEditMode] = useState<'visual' | 'json' | 'prd' | 'prototype'>('visual')
   const [availableAgents, setAvailableAgents] = useState<Array<{ name: string; label: string }>>([
     { name: REQUIREMENT_AGENT, label: '需求梳理助手' },
     { name: 'build', label: '默认助手' }
@@ -348,6 +350,24 @@ export const RequirementPanel = memo(function RequirementPanel({ className = '' 
                 <Code className="w-3.5 h-3.5" />
                 JSON
               </button>
+              <button
+                onClick={() => setEditMode('prd')}
+                className={`flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors ${
+                  editMode === 'prd' ? 'bg-accent-main-100 text-white' : 'text-text-300 hover:text-text-100'}`}
+                title="PRD 文档"
+              >
+                <FileText className="w-3.5 h-3.5" />
+                PRD
+              </button>
+              <button
+                onClick={() => setEditMode('prototype')}
+                className={`${
+                  editMode === 'prototype' ? 'bg-accent-main-100 text-white' : 'text-text-300 hover:text-text-100 hover:bg-bg-300'}}`}
+                title="原型预览"
+              >
+                <Maximize2 className="w-3.5 h-3.5" />
+                原型
+              </button>
             </div>
             <button
               onClick={toggle}
@@ -418,6 +438,10 @@ export const RequirementPanel = memo(function RequirementPanel({ className = '' 
                 }
                 setJsonContent(JSON.stringify(newReq, null, 2)) }}
             />
+          ) : editMode === 'prototype' ? (
+            <PrototypeViewer requirement={requirement} />
+          ) : editMode === 'prd' ? (
+            <PRDViewer requirement={requirement} />
           ) : (
             <Editor
               height="100%"
