@@ -1,5 +1,5 @@
 import { memo, useState } from 'react'
-import { Plus, Trash2, ChevronDown, ChevronRight, HelpCircle } from 'lucide-react'
+import { Plus, Trash2, ChevronDown, ChevronRight, HelpCircle, GripVertical } from 'lucide-react'
 import type { Requirement } from '../../contexts/requirement'
 
 interface VisualEditorProps {
@@ -26,24 +26,34 @@ const ELEMENT_TYPE_LABELS: Record<string, string> = {
   SearchBar: '搜索栏',
   TabBar: '标签栏',
   NavBar: '导航栏',
+  SideBarLayout: '侧边栏布局',
 }
 
 // 显示条件预设（大白话）
 const DISPLAY_CONDITION_PRESETS = [
-  { value: 'always', label: '始终显示' },
+  { value: '', label: '始终显示' },
   { value: 'login_required', label: '用户已登录时显示' },
   { value: 'vip_only', label: '仅VIP用户可见' },
   { value: 'not_login', label: '未登录时显示' },
   { value: 'has_data', label: '有数据时显示' },
   { value: 'no_data', label: '无数据时显示' },
+  { value: 'stock_available', label: '有库存时显示' },
   { value: 'custom', label: '自定义条件...' },
 ]
+
+// 布局区域预设
+const DEFAULT_REGIONS = ['top_region', 'middle_region', 'bottom_region']
+const REGION_LABELS: Record<string, string> = {
+  top_region: '顶部区域',
+  middle_region: '中部区域',
+  bottom_region: '底部区域',
+}
 
 // 字段配置定义
 const FIELD_CONFIG = {
   page_info: {
     label: '页面信息',
-    icon: '📄',
+    icon: '\ud83d\udcc4',
     fields: [
       { key: 'page_id', label: '页面 ID', type: 'text', placeholder: 'pg_xxx', help: '唯一标识，系统自动生成' },
       { key: 'page_name', label: '页面名称', type: 'text', placeholder: '商品列表页', help: '页面的中文名称' },
@@ -52,17 +62,17 @@ const FIELD_CONFIG = {
   },
   function_description: {
     label: '功能描述',
-    icon: '📝',
+    icon: '\ud83d\udcdd',
     type: 'array',
     help: '描述页面的主要功能，每行一个功能点'
   },
   global_logic: {
     label: '全局逻辑',
-    icon: '⚙️',
+    icon: '\u2699\ufe0f',
     type: 'array',
     help: '页面级别的全局规则，如加载时机、权限控制等',
     fields: [
-      { key: 'logic_id', label: '规则 ID', type: 'text', placeholder: 'gl_xxx', hidden: true },
+      { key: 'logic_id', label: '规则 ID', type: 'text', hidden: true },
       { key: 'rule_name', label: '规则名称', type: 'text', placeholder: '登录校验' },
       { key: 'trigger_timing', label: '什么时候触发', type: 'select', options: [
         { value: 'onLoad', label: '页面加载时' },
@@ -73,11 +83,12 @@ const FIELD_CONFIG = {
         { value: 'onReachBottom', label: '滚动到底部时' },
       ]},
       { key: 'description', label: '规则说明', type: 'textarea', placeholder: '用大白话描述这个规则，比如：用户打开页面时检查是否登录' },
+      { key: 'api_reference', label: '接口地址', type: 'text', placeholder: '比如：GET /api/v1/user/info（选填）' },
     ]
   },
   layout_schema: {
     label: '布局结构',
-    icon: '📐',
+    icon: '\ud83d\udcd0',
     fields: [
       { key: 'layout_type', label: '布局方式', type: 'select', options: [
         { value: 'VerticalFlowLayout', label: '垂直流式布局（从上到下）' },
@@ -89,7 +100,7 @@ const FIELD_CONFIG = {
   },
   elements: {
     label: '页面元素',
-    icon: '🧩',
+    icon: '\ud83e\udde9',
     type: 'array',
     help: '页面上的所有组件元素',
     fields: [
@@ -109,13 +120,15 @@ const FIELD_CONFIG = {
         { value: 'SearchBar', label: '搜索栏' },
         { value: 'TabBar', label: '标签栏' },
         { value: 'NavBar', label: '导航栏' },
+        { value: 'SideBarLayout', label: '侧边栏布局' },
       ]},
       { key: 'element_name', label: '元素名称', type: 'text', placeholder: '商品卡片' },
       { key: 'parent_id', label: '放在哪个元素里面', type: 'parent_select' },
-      { key: 'functional_logic', label: '交互说明', type: 'textarea', placeholder: '用大白话描述，比如：点击后跳转到商品详情页' },
+      { key: 'behavior_rules', label: '行为规则', type: 'textarea', placeholder: '用大白话描述，包括：\n- 交互逻辑（点击跳转、滑动刷新等）\n- 展示限制（最多两行、超出省略等）\n- 条件渲染（VIP才显示、库存为0时置灰等）\n- 其他特殊说明' },
       { key: 'data_mapping', label: '数据来源', type: 'text', placeholder: '比如：商品图片、商品名称' },
       { key: 'api_reference', label: '接口地址', type: 'text', placeholder: '比如：GET /api/goods/list（选填）' },
       { key: 'display_condition', label: '什么时候显示', type: 'display_condition' },
+      { key: 'display_props', label: '显示属性', type: 'display_props' },
     ]
   }
 }
@@ -161,6 +174,16 @@ function FieldInput({ field, value, onChange, elements }: {
     )
   }
 
+  // 显示属性编辑器
+  if (field.type === 'display_props') {
+    return (
+      <DisplayPropsEditor
+        value={value || {}}
+        onChange={onChange}
+      />
+    )
+  }
+
   // 带中文标签的选择器
   if (field.type === 'select' && field.options && typeof field.options[0] === 'object') {
     return (
@@ -197,7 +220,7 @@ function FieldInput({ field, value, onChange, elements }: {
           value={value || ''}
           onChange={(e) => onChange(e.target.value)}
           placeholder={field.placeholder}
-          rows={3}
+          rows={4}
           className={baseClass + ' resize-none'}
         />
       )
@@ -221,7 +244,7 @@ function DisplayConditionEditor({ value, onChange }: {
 }) {
   const [preset, setPreset] = useState(() => {
     const found = DISPLAY_CONDITION_PRESETS.find(p => value === p.value)
-    return found ? found.value : (value ? 'custom' : 'always')
+    return found ? found.value : (value ? 'custom' : '')
   })
   const [customText, setCustomText] = useState(() => {
     const isPreset = DISPLAY_CONDITION_PRESETS.some(p => value === p.value)
@@ -264,11 +287,145 @@ function DisplayConditionEditor({ value, onChange }: {
           className="w-full px-3 py-2 bg-bg-300 border border-border-200 rounded text-sm text-text-100 focus:outline-none focus:ring-2 focus:ring-accent-main-100/50"
         />
       )}
-      {preset !== 'custom' && preset !== 'always' && (
+      {preset && preset !== 'custom' && (
         <p className="text-xs text-text-400">
           系统会自动转换为代码逻辑，您只需选择条件即可
         </p>
       )}
+    </div>
+  )
+}
+
+// 显示属性编辑器
+function DisplayPropsEditor({ value, onChange }: {
+  value: Record<string, unknown>
+  onChange: (value: Record<string, unknown>) => void
+}) {
+  const [entries, setEntries] = useState<Array<{ key: string; value: string }>>(() => {
+    return Object.entries(value || {}).map(([k, v]) => ({ key: k, value: String(v) }))
+  })
+
+  const updateEntries = () => {
+    const obj: Record<string, unknown> = {}
+    entries.forEach(e => {
+      if (e.key.trim()) {
+        // 尝试转换数字和布尔值
+        const num = Number(e.value)
+        if (e.value === 'true') obj[e.key] = true
+        else if (e.value === 'false') obj[e.key] = false
+        else if (!isNaN(num) && e.value !== '') obj[e.key] = num
+        else obj[e.key] = e.value
+      }
+    })
+    onChange(obj)
+  }
+
+  const addEntry = () => {
+    const newEntries = [...entries, { key: '', value: '' }]
+    setEntries(newEntries)
+    // Also update parent
+    const obj: Record<string, unknown> = {}
+    newEntries.forEach(e => { if (e.key.trim()) obj[e.key] = e.value })
+    onChange(obj)
+  }
+
+  const removeEntry = (index: number) => {
+    const newEntries = entries.filter((_, i) => i !== index)
+    setEntries(newEntries)
+    const obj: Record<string, unknown> = {}
+    newEntries.forEach(e => { if (e.key.trim()) obj[e.key] = e.value })
+    onChange(obj)
+  }
+
+  const updateEntry = (index: number, field: 'key' | 'value', val: string) => {
+    const newEntries = [...entries]
+    newEntries[index] = { ...newEntries[index], [field]: val }
+    setEntries(newEntries)
+    const obj: Record<string, unknown> = {}
+    newEntries.forEach(e => { if (e.key.trim()) obj[e.key] = e.value })
+    onChange(obj)
+  }
+
+  return (
+    <div className="space-y-2">
+      <p className="text-xs text-text-400 mb-2">配置组件的显示属性，如最大数量、列数、自动播放等</p>
+      {entries.map((entry, index) => (
+        <div key={index} className="flex gap-2 items-center">
+          <input
+            type="text"
+            value={entry.key}
+            onChange={(e) => updateEntry(index, 'key', e.target.value)}
+            placeholder="属性名，如：columns"
+            className="flex-1 px-2 py-1.5 bg-bg-300 border border-border-200 rounded text-xs text-text-100 focus:outline-none focus:ring-1 focus:ring-accent-main-100/50"
+          />
+          <input
+            type="text"
+            value={entry.value}
+            onChange={(e) => updateEntry(index, 'value', e.target.value)}
+            placeholder="值，如：2 或 true"
+            className="flex-1 px-2 py-1.5 bg-bg-300 border border-border-200 rounded text-xs text-text-100 focus:outline-none focus:ring-1 focus:ring-accent-main-100/50"
+          />
+          <button
+            onClick={() => removeEntry(index)}
+            className="p-1 text-red-400 hover:text-red-300 hover:bg-red-400/10 rounded transition-colors"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      ))}
+      <button
+        onClick={addEntry}
+        className="flex items-center gap-1 px-2 py-1 text-xs text-accent-main-100 hover:bg-accent-main-100/10 rounded transition-colors"
+      >
+        <Plus className="w-3.5 h-3.5" />
+        添加属性
+      </button>
+    </div>
+  )
+}
+
+// 布局区域编辑器
+function LayoutRegionsEditor({ regions, onChange }: {
+  regions: Record<string, string[]>
+  onChange: (regions: Record<string, string[]>) => void
+}) {
+  const allRegionKeys = [...new Set([...DEFAULT_REGIONS, ...Object.keys(regions)])]
+  
+  const updateRegion = (regionKey: string, elements: string) => {
+    const newRegions = { ...regions }
+    newRegions[regionKey] = elements.split(',').map(s => s.trim()).filter(Boolean)
+    onChange(newRegions)
+  }
+
+  const addRegion = () => {
+    const key = 'region_' + Date.now()
+    onChange({ ...regions, [key]: [] })
+  }
+
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-text-300">配置每个布局区域包含哪些元素（填写元素 ID，多个用逗号分隔）</p>
+      {allRegionKeys.map(key => (
+        <div key={key} className="flex items-center gap-2">
+          <label className="text-xs font-medium text-text-200 w-24 shrink-0">
+            {REGION_LABELS[key] || key}
+          </label>
+          <input
+            type="text"
+            value={(regions[key] || []).join(', ')}
+            onChange={(e) => updateRegion(key, e.target.value)}
+            placeholder="元素 ID，多个用逗号分隔"
+            className="flex-1 px-3 py-2 bg-bg-300 border border-border-200 rounded text-sm text-text-100 focus:outline-none focus:ring-2 focus:ring-accent-main-100/50"
+          />
+        </div>
+      ))}
+      <button
+        onClick={addRegion}
+        className="flex items-center gap-1.5 px-3 py-2 text-sm text-accent-main-100 hover:bg-accent-main-100/10 rounded transition-colors"
+      >
+        <Plus className="w-4 h-4" />
+        添加自定义区域
+      </button>
     </div>
   )
 }
@@ -353,7 +510,7 @@ function ObjectArrayEditor({ items, fields, onChange, onAdd, onRemove, emptyLabe
         </div>
       ) : (
         items.map((item, index) => (
-          <div key={item.element_id || index} className="border border-border-200 rounded-lg overflow-hidden bg-bg-300/50">
+          <div key={item.element_id || item.logic_id || index} className="border border-border-200 rounded-lg overflow-hidden bg-bg-300/50">
             <div
               className="flex items-center justify-between px-4 py-3 bg-bg-300 cursor-pointer hover:bg-bg-400 transition-colors"
               onClick={() => toggleExpand(index)}
@@ -426,43 +583,6 @@ function ObjectArrayEditor({ items, fields, onChange, onAdd, onRemove, emptyLabe
   )
 }
 
-// 显示条件转换：大白话 -> JSON格式
-function convertDisplayCondition(condition: string): any {
-  if (!condition || condition === 'always') return null
-  
-  const conditionMap: Record<string, any> = {
-    'login_required': { type: 'user', operator: 'eq', value: 'logged_in' },
-    'vip_only': { type: 'user', operator: 'eq', value: 'vip' },
-    'not_login': { type: 'user', operator: 'eq', value: 'not_logged_in' },
-    'has_data': { type: 'data', operator: 'exists', value: true },
-    'no_data': { type: 'data', operator: 'empty', value: true },
-  }
-  
-  return conditionMap[condition] || { type: 'custom', expression: condition }
-}
-
-// 显示条件转换：JSON格式 -> 大白话
-function convertFromDisplayCondition(condition: any): string {
-  if (!condition) return 'always'
-  
-  const reverseMap: Record<string, string> = {
-    'user:eq:logged_in': 'login_required',
-    'user:eq:vip': 'vip_only',
-    'user:eq:not_logged_in': 'not_login',
-    'data:exists:true': 'has_data',
-    'data:empty:true': 'no_data',
-  }
-  
-  const key = condition.type && condition.operator && condition.value !== undefined
-    ? condition.type + ':' + condition.operator + ':' + condition.value
-    : null
-    
-  if (key && reverseMap[key]) return reverseMap[key]
-  if (condition.type === 'custom' && condition.expression) return condition.expression
-  
-  return JSON.stringify(condition)
-}
-
 // 主可视化编辑器
 export const VisualEditor = memo(function VisualEditor({
   requirement,
@@ -496,7 +616,7 @@ export const VisualEditor = memo(function VisualEditor({
     onUpdate({
       global_logic: [
         ...requirement.global_logic,
-        { logic_id: 'gl_' + Date.now(), rule_name: '', trigger_timing: 'onLoad', description: '' }
+        { logic_id: 'gl_' + Date.now(), rule_name: '', trigger_timing: 'onLoad', description: '', api_reference: null }
       ]
     })
   }
@@ -507,11 +627,20 @@ export const VisualEditor = memo(function VisualEditor({
     })
   }
 
-  const updateLayoutSchema = (key: string, value: string) => {
+  const updateLayoutSchema = (key: string, value: any) => {
     onUpdate({
       layout_schema: {
         ...requirement.layout_schema,
         [key]: value
+      }
+    })
+  }
+
+  const updateRegions = (regions: Record<string, string[]>) => {
+    onUpdate({
+      layout_schema: {
+        ...requirement.layout_schema,
+        regions
       }
     })
   }
@@ -523,9 +652,9 @@ export const VisualEditor = memo(function VisualEditor({
       parent_id: 'root',
       display_props: {},
       element_name: '',
-      functional_logic: '',
+      behavior_rules: '',
       data_mapping: '',
-      api_reference: '',
+      api_reference: null,
       display_condition: ''
     })
   }
@@ -642,23 +771,36 @@ export const VisualEditor = memo(function VisualEditor({
           )}
 
           {activeSection === 'layout_schema' && (
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div className="flex items-center gap-2 mb-4">
                 <span className="text-2xl">{FIELD_CONFIG.layout_schema.icon}</span>
                 <h2 className="text-lg font-semibold text-text-100">{FIELD_CONFIG.layout_schema.label}</h2>
               </div>
-              {FIELD_CONFIG.layout_schema.fields.map((field) => (
-                <div key={field.key}>
-                  <label className="flex items-center gap-1.5 text-sm font-medium text-text-200 mb-2">
-                    {field.label}
-                  </label>
-                  <FieldInput
-                    field={field}
-                    value={requirement.layout_schema[field.key as keyof typeof requirement.layout_schema]}
-                    onChange={(value) => updateLayoutSchema(field.key, value)}
-                  />
-                </div>
-              ))}
+              <div>
+                <label className="flex items-center gap-1.5 text-sm font-medium text-text-200 mb-2">
+                  布局方式
+                </label>
+                <FieldInput
+                  field={FIELD_CONFIG.layout_schema.fields[0]}
+                  value={requirement.layout_schema.layout_type}
+                  onChange={(value) => updateLayoutSchema('layout_type', value)}
+                />
+              </div>
+              <div>
+                <label className="flex items-center gap-1.5 text-sm font-medium text-text-200 mb-2">
+                  区域划分
+                  <span className="group relative">
+                    <HelpCircle className="w-4 h-4 text-text-400" />
+                    <span className="hidden group-hover:block absolute left-0 top-full mt-1 w-64 p-2 bg-bg-100 border border-border-200 rounded shadow-lg text-text-200 text-xs z-10">
+                      定义页面从上到下分为哪些区域，每个区域包含哪些元素
+                    </span>
+                  </span>
+                </label>
+                <LayoutRegionsEditor
+                  regions={requirement.layout_schema.regions || {}}
+                  onChange={updateRegions}
+                />
+              </div>
             </div>
           )}
 

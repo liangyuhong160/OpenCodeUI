@@ -1,0 +1,174 @@
+{
+  "page_info": {
+    "page_id": "pg_mall_category_list",
+    "page_name": "商城分类列表页",
+    "route_path": "/pages/mall/category-list"
+  },
+  "function_description": [
+    "左侧展示商品分类导航菜单，右侧展示选中分类下的商品列表",
+    "商品板块显示商品图片、名称、价格、会员价和购买按钮",
+    "实现分类与商品列表的联动效果",
+    "支持商品列表滚动加载更多"
+  ],
+  "global_logic": [
+    {
+      "logic_id": "gl_load_categories",
+      "rule_name": "加载分类数据",
+      "trigger_timing": "onLoad",
+      "description": "页面加载时请求商品分类数据并渲染左侧分类菜单"
+    },
+    {
+      "logic_id": "gl_load_products",
+      "rule_name": "加载商品数据",
+      "trigger_timing": "onLoad",
+      "description": "默认加载第一个分类下的商品列表"
+    },
+    {
+      "logic_id": "gl_category_select",
+      "rule_name": "分类选择联动",
+      "trigger_timing": "onCategoryClick",
+      "description": "点击左侧分类时，右侧商品列表切换为对应分类的商品"
+    }
+  ],
+  "layout_schema": {
+    "layout_type": "HorizontalSplitLayout",
+    "regions": {
+      "left_menu": {
+        "region_id": "reg_left_menu",
+        "element_type": "MenuList",
+        "width_ratio": 30,
+        "height_ratio": 100,
+        "props": {
+          "item_height": 50
+        }
+      },
+      "right_content": {
+        "region_id": "reg_right_content",
+        "element_type": "GridList",
+        "width_ratio": 70,
+        "height_ratio": 100,
+        "props": {
+          "grid_columns": 2,
+          "item_spacing": 10
+        }
+      }
+    }
+  },
+  "elements": [
+    {
+      "element_id": "el_category_menu",
+      "element_type": "MenuList",
+      "parent_id": "root",
+      "display_props": {
+        "backgroundColor": "#f5f5f5",
+        "width": "30%"
+      },
+      "element_name": "左侧分类菜单",
+      "functional_logic": "点击分类项切换右侧商品列表内容",
+      "data_mapping": "categoryList[].{id: categoryId, name: categoryName}",
+      "api_reference": "/api/categories/list"
+    },
+    {
+      "element_id": "el_product_grid",
+      "element_type": "GridList",
+      "parent_id": "root",
+      "display_props": {
+        "width": "70%",
+        "padding": 10
+      },
+      "element_name": "商品网格列表",
+      "functional_logic": "展示当前选中分类下的商品列表",
+      "data_mapping": "productList[].{image: imageUrl, name: productName, price: originalPrice, member_price: memberPrice, id: productId}",
+      "api_reference": "/api/products/list"
+    },
+    {
+      "element_id": "el_product_card",
+      "element_type": "Card",
+      "parent_id": "el_product_grid",
+      "display_props": {
+        "borderRadius": 8,
+        "shadow": true,
+        "marginBottom": 10
+      },
+      "element_name": "商品卡片",
+      "functional_logic": "包含商品完整信息展示区域",
+      "data_mapping": "{id: productId, name: productName}"
+    },
+    {
+      "element_id": "el_product_image",
+      "element_type": "Image",
+      "parent_id": "el_product_card",
+      "display_props": {
+        "width": "100%",
+        "height": 150,
+        "objectFit": "cover",
+        "borderRadius": 8
+      },
+      "element_name": "商品图片",
+      "functional_logic": "点击跳转到商品详情页",
+      "data_mapping": "imageUrl",
+      "api_reference": null
+    },
+    {
+      "element_id": "el_product_name",
+      "element_type": "Text",
+      "parent_id": "el_product_card",
+      "display_props": {
+        "fontSize": 14,
+        "fontWeight": "bold",
+        "marginTop": 8,
+        "textAlign": "left",
+        "numberOfLines": 2
+      },
+      "element_name": "商品名称",
+      "functional_logic": "显示商品标题",
+      "data_mapping": "productName",
+      "api_reference": null
+    },
+    {
+      "element_id": "el_product_price",
+      "element_type": "PriceText",
+      "parent_id": "el_product_card",
+      "display_props": {
+        "fontSize": 16,
+        "color": "#ff0000",
+        "fontWeight": "bold",
+        "marginTop": 5
+      },
+      "element_name": "商品价格",
+      "functional_logic": "显示商品原价",
+      "data_mapping": "originalPrice",
+      "api_reference": null
+    },
+    {
+      "element_id": "el_member_price",
+      "element_type": "PriceText",
+      "parent_id": "el_product_card",
+      "display_props": {
+        "fontSize": 14,
+        "color": "#ff6600",
+        "marginTop": 3
+      },
+      "element_name": "会员价格",
+      "functional_logic": "显示会员专享价格",
+      "data_mapping": "memberPrice",
+      "api_reference": null
+    },
+    {
+      "element_id": "el_buy_button",
+      "element_type": "Button",
+      "parent_id": "el_product_card",
+      "display_props": {
+        "backgroundColor": "#ff6600",
+        "color": "#ffffff",
+        "borderRadius": 20,
+        "marginTop": 8,
+        "marginBottom": 8
+      },
+      "element_name": "购买按钮",
+      "functional_logic": "点击添加商品到购物车或直接购买",
+      "data_mapping": "'立即购买'",
+      "api_reference": null
+    }
+  ]
+}

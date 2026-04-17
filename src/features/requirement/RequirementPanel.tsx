@@ -99,7 +99,7 @@ export const RequirementPanel = memo(function RequirementPanel({ className = '' 
         .map((p: any) => p.text)
         .join('\n')
       
-      const jsonMatch = text.match(/```json\s*([\s\S]*?)``/)
+      const jsonMatch = text.match(/```(?:json|silent-json)\s*([\s\S]*?)```/)
       if (jsonMatch) {
         try {
           const json = JSON.parse(jsonMatch[1])
@@ -108,7 +108,7 @@ export const RequirementPanel = memo(function RequirementPanel({ className = '' 
           if (newContent !== lastJsonRef.current) {
             lastJsonRef.current = newContent
             setJsonContent(newContent)
-            showNotification('success', '已同步 JSON')
+            // 静默同步，不显示通知
             return true
           }
         } catch {

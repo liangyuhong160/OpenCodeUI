@@ -15,6 +15,7 @@ export interface Requirement {
     rule_name: string
     trigger_timing: string
     description: string
+    api_reference: string | null
   }>
   layout_schema: {
     layout_type: string
@@ -26,9 +27,9 @@ export interface Requirement {
     parent_id: string
     display_props: Record<string, unknown>
     element_name: string
-    functional_logic: string
+    behavior_rules: string
     data_mapping: string
-    api_reference: string
+    api_reference: string | null
     display_condition?: string
   }>
 }
@@ -43,7 +44,11 @@ const DEFAULT_REQUIREMENT: Requirement = {
   global_logic: [],
   layout_schema: {
     layout_type: 'VerticalFlowLayout',
-    regions: {}
+    regions: {
+      top_region: [],
+      middle_region: [],
+      bottom_region: []
+    }
   },
   elements: []
 }
@@ -172,12 +177,12 @@ export function RequirementProvider({ children }: { children: ReactNode }) {
         directory: formatPathForApi(directory),
         parts: [{
           type: 'text',
-          text: `请帮我创建/更新文件 data/pages/${requirement.page_info.page_id}.json，内容如下：\n\n\`\`\`json\n${jsonContent}\n\`\`\``
+          text: '请帮我创建/更新文件 data/pages/' + requirement.page_info.page_id + '.json，内容如下：\n\n```json\n' + jsonContent + '\n```'
         }],
       })
-      setCurrentFile(`data/pages/${requirement.page_info.page_id}.json`)
+      setCurrentFile('data/pages/' + requirement.page_info.page_id + '.json')
       localStorage.setItem(STORAGE_KEY, jsonContent)
-      localStorage.setItem(CURRENT_FILE_KEY, `data/pages/${requirement.page_info.page_id}.json`)
+      localStorage.setItem(CURRENT_FILE_KEY, 'data/pages/' + requirement.page_info.page_id + '.json')
       setIsDirty(false)
       return true
     } catch (error) {
@@ -238,13 +243,13 @@ export function RequirementProvider({ children }: { children: ReactNode }) {
 
       switch (action) {
         case 'analyze':
-          promptText = `请分析以下需求 JSON，并给出补充建议（只修改 JSON，不要生成其他文件）：\n\n\`\`\`json\n${jsonContent}\n\`\`\`\n\n如果需要修改 JSON，请直接在回复中给出完整的更新后的 JSON。`
+          promptText = '请分析以下需求 JSON，并给出补充建议（只修改 JSON，不要生成其他文件）：\n\n```json\n' + jsonContent + '\n```\n\n如果需要修改 JSON，请直接在回复中给出完整的更新后的 JSON。'
           break
         case 'generate_prd':
-          promptText = `请根据以下需求 JSON 生成 PRD 文档，保存到 output/prd/${requirement.page_info.page_id}.md：\n\n\`\`\`json\n${jsonContent}\n\`\`\`\n\n请输出完整的 PRD 文档。`
+          promptText = '请根据以下需求 JSON 生成 PRD 文档，保存到 output/prd/' + requirement.page_info.page_id + '.md：\n\n```json\n' + jsonContent + '\n```\n\n请输出完整的 PRD 文档。'
           break
         case 'generate_prototype':
-          promptText = `请根据以下需求 JSON 生成高保真原型 HTML，保存到 output/prototype/${requirement.page_info.page_id}.html：\n\n\`\`\`json\n${jsonContent}\n\`\`\`\n\n要求：\n1. 使用 TailwindCSS CDN\n2. 使用 Alpine.js CDN\n3. 高保真微信小程序风格\n4. 完整可运行`
+          promptText = '请根据以下需求 JSON 生成高保真原型 HTML，保存到 output/prototype/' + requirement.page_info.page_id + '.html：\n\n```json\n' + jsonContent + '\n```\n\n要求：\n1. 使用 TailwindCSS CDN\n2. 使用 Alpine.js CDN\n3. 高保真微信小程序风格\n4. 完整可运行'
           break
       }
 

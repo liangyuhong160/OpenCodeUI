@@ -7,16 +7,11 @@ interface TextPartViewProps {
   isStreaming?: boolean
 }
 
-/**
- * TextPartView - 直接渲染后端推送的文本，无缓冲延迟
- */
 export const TextPartView = memo(function TextPartView({ part, isStreaming = false }: TextPartViewProps) {
-  const displayText = part.text || ''
+  const rawText = part.text || ''
+  const displayText = rawText.replace(new RegExp('```silent-json\\s*[\\s\\S]*?```', 'g'), '').trim()
 
-  // 跳过空文本（除非正在 streaming）
   if (!displayText.trim() && !isStreaming) return null
-
-  // 跳过 synthetic 文本（系统上下文，单独处理）
   if (part.synthetic) return null
 
   return (
